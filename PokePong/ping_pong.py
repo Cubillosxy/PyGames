@@ -53,9 +53,12 @@ span_text = 120
 text_score_1.center = (width/2 - span_text, 15)
 text_score_2.center = (width/2 + span_text, 15)
 
+counter_shots = 0
+delay_value = 3
+impulse_pokedex = 1
 run = True
 while run:
-    pygame.time.delay(2)
+    pygame.time.delay(delay_value)
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
@@ -94,27 +97,27 @@ while run:
     if keys[pygame.K_UP] and pokedex_rect_player2.top > 0:
         poke_ball_rect, pokedex_rect_player2 = move_pokedex(
             pokedex_rect_player2,
-            impulse=-1,
+            impulse=-impulse_pokedex,
             move_pokeball=not turn_player_1
         )
 
     if keys[pygame.K_DOWN] and pokedex_rect_player2.bottom < height:
         poke_ball_rect, pokedex_rect_player2 = move_pokedex(
             pokedex_rect_player2,
-            impulse=1,
+            impulse=impulse_pokedex,
             move_pokeball=not turn_player_1
         )
 
     if keys[pygame.K_a] and pokedex_rect_player1.top > 0:
         poke_ball_rect, pokedex_rect_player1 = move_pokedex(
             pokedex_rect_player1,
-            impulse=-1,
+            impulse=-impulse_pokedex,
             move_pokeball=turn_player_1
         )
     if keys[pygame.K_z] and pokedex_rect_player1.bottom < height:
         poke_ball_rect, pokedex_rect_player1 = move_pokedex(
             pokedex_rect_player1,
-            impulse=1,
+            impulse=impulse_pokedex,
             move_pokeball=turn_player_1
         )
 
@@ -134,9 +137,24 @@ while run:
         )
         speed[0] = -speed[0]
 
+        # set speed to half
+        if abs(speed[0]) > 1:
+            speed = [i/2 for i in speed]
+            delay_value = delay_value // 2
+            impulse_pokedex = impulse_pokedex // 4
+            if impulse_pokedex < 1:
+                impulse_pokedex = 1
+
     # check if pokedex touch the pokeball
     if pokedex_rect_player1.colliderect(poke_ball_rect) or pokedex_rect_player2.colliderect(poke_ball_rect):
         speed[0] = -speed[0]
+        counter_shots += 1
+        if counter_shots % 2 == 0:
+            speed[0] = speed[0] + 1 if speed[0] > 0 else speed[0] - 1
+            speed[1] = speed[1] + 1 if speed[1] > 0 else speed[1] - 1
+            delay_value += 1
+        if delay_value % 4 == 0:
+            impulse_pokedex += 1
 
     # up down window
     if poke_ball_rect.top < 0 or poke_ball_rect.bottom > height:
