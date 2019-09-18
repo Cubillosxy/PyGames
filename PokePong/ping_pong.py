@@ -5,7 +5,11 @@ pygame.init()
 
 size = width, height = 1000, 600
 speed = [1, 1]
-black = 255, 255, 255
+white = 255, 255, 255
+black = 0, 0, 0
+green = (0, 255, 0)
+blue = (0, 0, 128)
+red_poke = 222, 109, 103
 
 screen = pygame.display.set_mode(size)
 pygame.display.set_caption('Ping Pong - kong ?')
@@ -21,7 +25,7 @@ pokedex_width, pokedex_height = pokedex.get_size()
 
 # move to center
 pokeball_start_coordinate = [0 + pokedex.get_width(), height/2 - poke_ball.get_height()/2]
-pokeball_player2_coordinate = [width - pokedex.get_width(), height/2 - poke_ball.get_height()/2]
+pokeball_player2_coordinate = [width - pokedex.get_width() - poke_ball.get_width(), height/2 - poke_ball.get_height()/2]
 poke_ball_rect.move_ip(*pokeball_start_coordinate)
 
 
@@ -35,9 +39,26 @@ is_playing = False
 # it time to player 1?
 turn_player_1 = True
 
+# text
+font = pygame.font.Font('freesansbold.ttf', 30)
+text_container_p1 = font.render('0', True, red_poke, white)
+text_container_p2 = font.render('0', True, red_poke, white)
+
+text_score_1 = text_container_p1.get_rect()
+text_score_2 = text_container_p2.get_rect()
+score_player1 = 0
+score_player2 = 0
+
+span_text = 120
+text_score_1.center = (width/2 - span_text, 15)
+text_score_2.center = (width/2 + span_text, 15)
+
+counter_shots = 0
+delay_value = 3
+impulse_pokedex = 1
 run = True
 while run:
-    pygame.time.delay(4)
+    pygame.time.delay(delay_value)
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             run = False
@@ -48,6 +69,26 @@ while run:
             return poke_ball_rect.move(0, impulse), target
         return poke_ball_rect, target
 
+    def set_pokeball(turn_player, score_p1, score_p2):
+        new_pokeball = poke_ball.get_rect()
+        # win p1 , put the ball in player 2 side
+        if turn_player:
+            score_p1 += 1
+            _height = (pokedex_rect_player2.top + pokedex_rect_player2.bottom) / 2
+            _weight = pokeball_player2_coordinate[0]
+        else:
+            _height = (pokedex_rect_player1.top + pokedex_rect_player1.bottom) / 2
+            _weight = pokeball_start_coordinate[0]
+            score_p2 += 1
+        text_p1 = font.render(str(score_p1), True, red_poke, white)
+        text_p2 = font.render(str(score_p2), True, red_poke, white)
+        text_rect_p1 = text_p1.get_rect()
+        text_rect_p2 = text_p2.get_rect()
+        text_rect_p1.center = (width / 2 - span_text, 15)
+        text_rect_p2.center = (width / 2 + span_text, 15)
+        new_pokeball.move_ip(_weight, _height - poke_ball.get_height()/2)
+        return new_pokeball, not turn_player, score_p1, score_p2, text_p1, text_p2
+
     # move pokedex
     keys = pygame.key.get_pressed()
     move_ball_up = False
@@ -56,27 +97,27 @@ while run:
     if keys[pygame.K_UP] and pokedex_rect_player2.top > 0:
         poke_ball_rect, pokedex_rect_player2 = move_pokedex(
             pokedex_rect_player2,
-            impulse=-1,
+            impulse=-impulse_pokedex,
             move_pokeball=not turn_player_1
         )
 
     if keys[pygame.K_DOWN] and pokedex_rect_player2.bottom < height:
         poke_ball_rect, pokedex_rect_player2 = move_pokedex(
             pokedex_rect_player2,
-            impulse=1,
+            impulse=impulse_pokedex,
             move_pokeball=not turn_player_1
         )
 
     if keys[pygame.K_a] and pokedex_rect_player1.top > 0:
         poke_ball_rect, pokedex_rect_player1 = move_pokedex(
             pokedex_rect_player1,
-            impulse=-1,
+            impulse=-impulse_pokedex,
             move_pokeball=turn_player_1
         )
     if keys[pygame.K_z] and pokedex_rect_player1.bottom < height:
         poke_ball_rect, pokedex_rect_player1 = move_pokedex(
             pokedex_rect_player1,
-            impulse=1,
+            impulse=impulse_pokedex,
             move_pokeball=turn_player_1
         )
 
@@ -89,22 +130,42 @@ while run:
     # check if the player lose
     if poke_ball_rect.left < 0 or poke_ball_rect.right > width:
         is_playing = False
-        turn_player_1 = not turn_player_1
+        poke_ball_rect, turn_player_1, score_player1, score_player2, text_container_p1, text_container_p2 = set_pokeball(
+            turn_player_1,
+            score_p1=score_player1,
+            score_p2=score_player2,
+        )
+        speed[0] = -speed[0]
 
-        # TODO place pokeball en othder
+        # set speed to half
+        if abs(speed[0]) > 1:
+            speed = [i/2 for i in speed]
+            delay_value = delay_value // 2
+            impulse_pokedex = impulse_pokedex // 4
+            if impulse_pokedex < 1:
+                impulse_pokedex = 1
 
     # check if pokedex touch the pokeball
     if pokedex_rect_player1.colliderect(poke_ball_rect) or pokedex_rect_player2.colliderect(poke_ball_rect):
         speed[0] = -speed[0]
+        counter_shots += 1
+        if counter_shots % 2 == 0:
+            speed[0] = speed[0] + 1 if speed[0] > 0 else speed[0] - 1
+            speed[1] = speed[1] + 1 if speed[1] > 0 else speed[1] - 1
+            delay_value += 1
+        if delay_value % 4 == 0:
+            impulse_pokedex += 1
 
     # up down window
     if poke_ball_rect.top < 0 or poke_ball_rect.bottom > height:
         speed[1] = -speed[1]
 
-    screen.fill(black)
+    screen.fill(white)
     screen.blit(poke_ball, poke_ball_rect)
     screen.blit(pokedex, pokedex_rect_player1)
     screen.blit(pokedex, pokedex_rect_player2)
+    screen.blit(text_container_p1, text_score_1)
+    screen.blit(text_container_p2, text_score_2)
     pygame.display.flip()
 
 pygame.quit()
